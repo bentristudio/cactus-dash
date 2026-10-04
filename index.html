@@ -50,7 +50,7 @@
   #title{position:absolute;inset:0;z-index:10;pointer-events:none}
   #title .scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(30,14,6,.72) 0%,rgba(30,14,6,.45) 34%,rgba(30,14,6,0) 62%)}
   #title .col{position:absolute;left:clamp(20px,5vw,72px);top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:min(2.2vh,18px);pointer-events:auto;max-width:min(560px,92vw)}
-  .logo{margin:0 0 0 -6px;line-height:0}
+  .logo{margin:0;line-height:0}
   .logo canvas{display:block;width:auto;height:auto;max-height:min(25vh,250px);max-width:100%}
   .byline{display:flex;align-items:center;width:max-content;margin-top:-4px;padding:8px 16px 8px 14px;border-radius:13px;background:rgba(13,21,17,.84);border:1px solid rgba(244,239,227,.12);box-shadow:0 8px 20px rgba(0,0,0,.28)}
   .byline .word{display:block}
@@ -151,14 +151,11 @@
   .btn2:hover{filter:brightness(1.08)}
   .handle-field{display:flex;align-items:center;gap:4px;height:58px;padding:0 16px;border-radius:12px;background:rgba(255,244,226,.07);border:1.5px solid rgba(255,244,226,.28);cursor:text}
   .handle-field:focus-within{border-color:#7cbf63;box-shadow:0 0 0 3px rgba(124,191,99,.3)}
-  .handle-field span{font-family:var(--brand);font-weight:700;font-size:24px;color:#7cbf63}
   .handle-field input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--cream);font-family:var(--brand);font-weight:600;font-size:22px}
   .handle-field input::placeholder{color:rgba(255,244,226,.35)}
   .handle-err{margin:10px 0 0;color:#ffb199;font-weight:600;font-size:13px;letter-spacing:.04em}
   #handleModal .panel{padding:22px 26px 22px}
   #handleModal h2{font-size:min(44px,6.5vh)}
-  .x-badge{display:inline-block;width:.86em;height:.86em;vertical-align:-.04em;transform:skewX(9deg);border-radius:.2em;box-shadow:0 0 0 2px rgba(255,244,226,.28),0 6px 14px rgba(0,0,0,.35)}
-  .x-badge svg{display:block;width:100%;height:100%}
   .profile-line{margin:-4px 0 0;font-size:12px;font-weight:600;letter-spacing:.08em;color:#e8c9a8}
   .profile-line button{padding:0;border:0;background:none;color:#8fd174;font-weight:700;letter-spacing:.08em;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
   .cta-row{display:flex;gap:10px;align-items:stretch}
@@ -188,6 +185,26 @@
   .lb-list .h{font-weight:700;font-size:13px;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lb-list .t{font-weight:700;font-size:13px;letter-spacing:.04em}
   .lb-list .empty{display:block;background:none;padding:2px 0;font-size:13px;color:#f0cfae;font-weight:600}
+  .lb-you{margin:6px 0 4px;padding:8px 10px;border-radius:10px;background:rgba(116,185,93,.24);border:1px solid rgba(116,185,93,.55)}
+  .lb-you .lbl{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#d8f0c9;margin-bottom:4px}
+  .lb-you .you-row{display:grid;grid-template-columns:auto 24px 1fr auto;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+  .lb-you .r{font-family:var(--display);font-weight:800;font-size:14px;min-width:22px}
+  .lb-you img{width:24px;height:24px;border-radius:50%;background:var(--c1)}
+  .lb-you .h{font-weight:700;font-size:13px;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lb-you .t{font-weight:700;font-size:13px;letter-spacing:.04em}
+  #lbModal .panel{padding:20px 26px 20px;max-height:96vh}
+  #lbModal h2{font-size:min(44px,6.2vh)}
+  #lbModal .sub{margin-bottom:8px}
+  #lbModal table.res{border-spacing:0 4px}
+  #lbModal table.res td{padding:4px 10px}
+  #lbModal table.res img{width:26px;height:26px}
+  #lbModal .actions{margin-top:12px}
+  .lb-you-lg{margin-top:8px;padding:8px 14px}
+  .lb-you-lg .lbl{font-size:11px}
+  .lb-you-lg .you-row{grid-template-columns:auto 34px 1fr auto;gap:12px}
+  .lb-you-lg .r{font-size:18px}
+  .lb-you-lg img{width:34px;height:34px}
+  .lb-you-lg .h,.lb-you-lg .t{font-size:15px}
   .lb-link{grid-column:1 / -1;justify-self:start;display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:0;border:0;background:none;color:#8fd174;font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
   .lb-link svg{width:14px;height:14px}
   .lb-line{margin:12px 0 0;font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream)}
@@ -256,6 +273,7 @@
     <div class="lb-card glass" id="lbCard" hidden>
       <div class="lb-card-head"><span class="eyebrow">Top racers</span><span class="lb-card-sub">Fastest 3 laps</span></div>
       <ol class="lb-list" id="lbCardList"></ol>
+      <div class="lb-you" id="lbCardYou" hidden></div>
       <button class="lb-link" id="lbCardMore">Full leaderboard <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
     </div>
     <div class="course glass">
@@ -296,10 +314,10 @@
   <div class="modal" id="handleModal" hidden>
     <form class="panel glass" id="handleForm" novalidate>
       <div class="eyebrow" id="profileEyebrow">Before your first race</div>
-      <h2>YOUR <span class="x-badge" role="img" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#000"/><path fill="#fff" transform="translate(4.16 4.2) scale(.65)" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span> HANDLE</h2>
+      <h2>YOUR <em>NAME</em></h2>
       <p class="sub" id="profileSub">Shown on the scoreboard.</p>
-      <label class="handle-field"><span aria-hidden="true">@</span><input id="handleInput" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="16" placeholder="yourhandle" aria-label="X handle" aria-describedby="handleErr"></label>
-      <p class="handle-err" id="handleErr" hidden>Use 1&ndash;15 letters, numbers or underscores.</p>
+      <label class="handle-field"><input id="handleInput" type="text" autocomplete="nickname" spellcheck="false" maxlength="16" placeholder="Your name" aria-label="Your name" aria-describedby="handleErr"></label>
+      <p class="handle-err" id="handleErr" hidden>Use 1&ndash;16 characters: letters, numbers, spaces, or - _ . &rsquo;</p>
       <div class="actions">
         <button type="submit" class="btn2 primary" id="profileSubmit">Start race</button>
         <button type="button" class="btn2" id="handleBack">Back</button>
@@ -341,7 +359,7 @@
       <h2 id="lbTitle">LEADER<em>BOARD</em></h2>
       <p class="sub" id="lbStatus">Loading&hellip;</p>
       <table class="res"><tbody id="lbBody"></tbody></table>
-      <p class="lb-line" id="lbMe" hidden></p>
+      <div class="lb-you lb-you-lg" id="lbMe" hidden></div>
       <div class="actions"><button class="btn2 primary" id="lbClose">Close</button></div>
     </div>
   </div>
@@ -508,10 +526,12 @@ function drawSpine(g, sp, len, hw) {
   g.closePath(); g.fill();
 }
 function makeTitleArt(cv) {
-  const F = 220, pad = Math.round(F * 0.18), font = '800 ' + F + 'px Outfit, "Arial Black", sans-serif';
+  const F = 220, font = '800 ' + F + 'px Outfit, "Arial Black", sans-serif';
+  const padX = Math.round(F * 0.1), padT = Math.round(F * 0.05), padB = Math.round(F * 0.22);
   const mg = cv.getContext('2d'); mg.font = font;
-  const W = Math.ceil(Math.max(mg.measureText('CACTUS').width, mg.measureText('DASH').width) + pad * 2), H = Math.ceil(F * 1.66 + pad * 2);
-  const x = pad, y1 = pad + F * 0.72, y2 = y1 + F * 0.92;
+  const m1 = mg.measureText('CACTUS'), m2 = mg.measureText('DASH');
+  const W = Math.ceil(Math.max(m1.width, m2.width) + padX * 2);
+  const x = padX, y1 = padT + m1.actualBoundingBoxAscent, y2 = y1 + F * 0.92, H = Math.ceil(y2 + padB);
   const T = canvas(W, H), g = T.getContext('2d'); g.font = font;
   g.fillStyle = '#f4efe3'; g.fillText('CACTUS', x, y1);
   g.fillStyle = greenFill(g, y2 - F * 0.78, y2); g.fillText('DASH', x, y2);
@@ -520,6 +540,8 @@ function makeTitleArt(cv) {
   const o = cv.getContext('2d');
   o.shadowColor = 'rgba(6,16,9,.55)'; o.shadowOffsetY = F * 0.04; o.shadowBlur = F * 0.08;
   o.drawImage(T, 0, 0);
+  const inkLeft = Math.min(x - m1.actualBoundingBoxLeft, x - m2.actualBoundingBoxLeft);
+  cv.style.transform = 'translateX(' + (-inkLeft / W * 100).toFixed(3) + '%)';
 }
 function cactusT(g, x, y, font, color, rib) {
   g.save(); g.font = font;
@@ -1990,7 +2012,7 @@ function playerInput() {
   const gp = navigator.getGamepads ? Array.from(navigator.getGamepads()).find(g => g) : null;
   let steer = (keys.ArrowRight || keys.KeyD || touch.right ? 1 : 0) - (keys.ArrowLeft || keys.KeyA || touch.left ? 1 : 0);
   let throttle = (keys.ArrowUp || keys.KeyW ? 1 : 0) - (keys.ArrowDown || keys.KeyS || touch.brake ? 1 : 0);
-  let drift = !!(keys.Space || keys.ShiftLeft || keys.ShiftRight || touch.drift);
+  let drift = !!(keys.Space || touch.drift);
   if (!document.getElementById('touch').hidden && !touch.brake) throttle = Math.max(throttle, 1);
   if (gp) {
     const ax = gp.axes[0] || 0; if (Math.abs(ax) > 0.15) steer = ax;
@@ -2174,7 +2196,7 @@ function buildStandings() {
     const r = document.createElement('div'); r.className = 'row' + (k.isPlayer ? ' me' : '');
     r.style.setProperty('--c1', cssHex(k.def.kart));
     r.innerHTML = '<span class="p"></span><img alt="" src="' + portraits[ROSTER.indexOf(k.def)] + '"><span class="n"></span><span class="g"></span>';
-    r.querySelector('.n').textContent = k.isPlayer && playerHandle ? '@' + playerHandle : k.def.name;
+    r.querySelector('.n').textContent = k.isPlayer && playerHandle ? playerHandle : k.def.name;
     H.standings.appendChild(r); rowEls.push(r); void i;
   });
 }
@@ -2371,7 +2393,7 @@ function showResults() {
   rk.forEach((k, i) => {
     const tr = document.createElement('tr'); if (k.isPlayer) tr.className = 'me';
     tr.innerHTML = '<td>' + (i + 1) + '</td><td><span class="who"><img alt="" style="--c1:' + cssHex(k.def.kart) + '" src="' + portraits[ROSTER.indexOf(k.def)] + '"><span></span></span></td><td>' + (i === 0 ? fmt(k.finishTime) : '+' + (k.finishTime - rk[0].finishTime).toFixed(3)) + '</td>';
-    tr.querySelector('.who span').textContent = k.isPlayer ? k.def.name + (playerHandle ? ' \u00b7 @' + playerHandle : ' (You)') : k.def.name;
+    tr.querySelector('.who span').textContent = k.isPlayer ? k.def.name + (playerHandle ? ' \u00b7 ' + playerHandle : ' (You)') : k.def.name;
     body.appendChild(tr);
   });
   renderLbLine();
@@ -2386,7 +2408,7 @@ function setPaused(v) {
 }
 
 // ================= main loop =================
-let last = performance.now(), frameAcc = 0, frameN = 0, perfChecked = false;
+let last = performance.now(), frameAcc = 0, frameN = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -2410,7 +2432,7 @@ function frame(now) {
   }
   Sound.music(desiredMusic());
   renderer.render(scene, camera);
-  if (!perfChecked && state !== 'title') { frameAcc += dt; frameN++; if (frameN === 150) { perfChecked = true; if (frameAcc / frameN > 0.024 && pixelRatio > 1) { pixelRatio = 1; renderer.setPixelRatio(1); } } }
+  if (dt > 0) { frameAcc += dt; frameN++; if (frameN >= 90) { if (frameAcc / frameN > 0.024 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.375); renderer.setPixelRatio(pixelRatio); renderer.setSize(innerWidth, innerHeight); } frameAcc = 0; frameN = 0; } }
 }
 function desiredMusic() {
   if (paused) return null;
@@ -2464,6 +2486,7 @@ function animateWorld(dt) {
 // ================= input =================
 addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') { unlockAudio(); if (e.code === 'Escape') $('#handleModal').hidden = true; return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) { clearKeys(); return; }
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
   unlockAudio();
@@ -2476,8 +2499,11 @@ addEventListener('keydown', e => {
     if (e.code === 'Enter' && $('#handleModal').hidden) askHandle();
   }
 });
-addEventListener('keyup', e => { keys[e.code] = false; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'race') setPaused(true); });
+function clearKeys() { for (const k in keys) keys[k] = false; }
+addEventListener('keyup', e => { keys[e.code] = false; if (e.key === 'Meta' || e.key === 'Control' || e.key === 'Alt') clearKeys(); });
+addEventListener('focus', clearKeys);
+document.addEventListener('visibilitychange', clearKeys);
+addEventListener('blur', () => { clearKeys(); if (state === 'race') setPaused(true); });
 document.querySelectorAll('#touch button').forEach(b => {
   const k = b.dataset.k;
   const on = e => { e.preventDefault(); touch[k] = true; b.classList.add('on'); };
@@ -2499,24 +2525,35 @@ async function lbRequest(method, body, query) {
 }
 async function lbProbe() {
   if (!/^https?:$/.test(location.protocol)) return;
-  try { renderLbCard(await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?handle=' + encodeURIComponent(playerHandle) : '')); LB.ok = true; }
+  try { renderLbCard(await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?name=' + encodeURIComponent(playerHandle) : '')); LB.ok = true; }
   catch (e) { LB.ok = false; renderLbCard(null); }
   $('#lbOpenResults').hidden = !LB.ok;
 }
 function lbRow(e, tag) {
   const el = document.createElement(tag), ri = Math.max(0, ROSTER.findIndex(r => r.id === e.racer)), def = ROSTER[ri];
-  if (playerHandle && e.handle.toLowerCase() === playerHandle.toLowerCase()) el.className = 'me';
+  if (playerHandle && e.name.toLowerCase() === playerHandle.toLowerCase()) el.className = 'me';
   return { el, ri, def };
+}
+function renderYou(el, d) {
+  if (!HANDLE_RE.test(playerHandle) || !d) { el.hidden = true; return; }
+  const me = d.me, ri = me && me.racer ? Math.max(0, ROSTER.findIndex(r => r.id === me.racer)) : selected, def = ROSTER[ri];
+  el.hidden = false;
+  el.innerHTML = '<div class="lbl"></div><div class="you-row"><span class="r"></span><img alt="" style="--c1:' + cssHex(def.kart) + '" src="' + portraits[ri] + '"><span class="h"></span><span class="t"></span></div>';
+  el.querySelector('.lbl').textContent = 'Your place' + (me && me.total ? ' \u00b7 of ' + me.total + (me.total === 1 ? ' racer' : ' racers') : '');
+  el.querySelector('.r').textContent = me ? '#' + me.rank : '\u2013';
+  el.querySelector('.h').textContent = playerHandle;
+  el.querySelector('.t').textContent = me ? fmt(me.timeMs / 1000) : 'Finish a race to rank';
 }
 function renderLbCard(d) {
   const card = $('#lbCard'), list = $('#lbCardList');
   if (!d) { card.hidden = true; return; }
   card.hidden = false; list.innerHTML = '';
+  renderYou($('#lbCardYou'), d);
   if (!d.entries.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No times yet. Be the first to finish a race.'; list.appendChild(li); return; }
   d.entries.slice(0, 5).forEach(e => {
     const { el, ri, def } = lbRow(e, 'li');
     el.innerHTML = '<span class="r"></span><img alt="" style="--c1:' + cssHex(def.kart) + '" src="' + portraits[ri] + '"><span class="h"></span><span class="t"></span>';
-    el.querySelector('.r').textContent = e.rank; el.querySelector('.h').textContent = '@' + e.handle; el.querySelector('.t').textContent = fmt(e.timeMs / 1000);
+    el.querySelector('.r').textContent = e.rank; el.querySelector('.h').textContent = e.name; el.querySelector('.t').textContent = fmt(e.timeMs / 1000);
     list.appendChild(el);
   });
 }
@@ -2524,8 +2561,8 @@ function submitResult(k) {
   LB.last = null;
   if (!LB.ok || !HANDLE_RE.test(playerHandle)) return;
   LB.last = { pending: true };
-  lbRequest('POST', { handle: playerHandle, racer: k.def.id, timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)) })
-    .then(d => { LB.last = d; renderLbLine(); })
+  lbRequest('POST', { name: playerHandle, racer: k.def.id, timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)) })
+    .then(d => { LB.last = d; renderLbLine(); lbProbe(); })
     .catch(e => { LB.last = { error: e.message }; renderLbLine(); });
 }
 function renderLbLine() {
@@ -2534,7 +2571,7 @@ function renderLbLine() {
   el.hidden = false;
   if (d.pending) el.textContent = 'Saving your time to the leaderboard\u2026';
   else if (d.error) el.textContent = 'Couldn\u2019t save to the leaderboard: ' + d.error;
-  else if (d.me) { el.innerHTML = ''; el.append('Global rank ', Object.assign(document.createElement('b'), { textContent: '#' + d.me.rank }), ' \u00b7 best ' + fmt(d.me.timeMs / 1000) + (d.improved ? ' \u00b7 new personal best' : '')); }
+  else if (d.me) { el.innerHTML = ''; el.append('Global rank ', Object.assign(document.createElement('b'), { textContent: '#' + d.me.rank }), (d.me.total ? ' of ' + d.me.total : '') + ' \u00b7 best ' + fmt(d.me.timeMs / 1000) + (d.improved ? ' \u00b7 new personal best' : '')); }
   else el.hidden = true;
 }
 async function openLeaderboard() {
@@ -2542,21 +2579,20 @@ async function openLeaderboard() {
   m.hidden = false; body.innerHTML = ''; me.hidden = true; status.hidden = false; status.textContent = 'Loading\u2026';
   $('#lbClose').focus();
   try {
-    const d = await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?handle=' + encodeURIComponent(playerHandle) : '');
+    const d = await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?name=' + encodeURIComponent(playerHandle) : '');
+    renderYou(me, d);
     if (!d.entries.length) { status.textContent = 'No times yet. Finish a race to claim the top spot.'; return; }
     status.hidden = true;
-    let meShown = false;
     d.entries.forEach(e => {
-      const tr = document.createElement('tr'), isMe = playerHandle && e.handle.toLowerCase() === playerHandle.toLowerCase();
-      if (isMe) { tr.className = 'me'; meShown = true; }
+      const tr = document.createElement('tr'), isMe = playerHandle && e.name.toLowerCase() === playerHandle.toLowerCase();
+      if (isMe) tr.className = 'me';
       const ri = Math.max(0, ROSTER.findIndex(r => r.id === e.racer)), def = ROSTER[ri];
       tr.innerHTML = '<td></td><td><span class="who"><img alt="" style="--c1:' + cssHex(def.kart) + '" src="' + portraits[ri] + '"><span></span></span></td><td></td>';
       tr.children[0].textContent = e.rank;
-      tr.querySelector('.who span').textContent = '@' + e.handle;
+      tr.querySelector('.who span').textContent = e.name;
       tr.children[2].textContent = fmt(e.timeMs / 1000);
       body.appendChild(tr);
     });
-    if (d.me && !meShown) { me.hidden = false; me.innerHTML = ''; me.append('You: ', Object.assign(document.createElement('b'), { textContent: '#' + d.me.rank }), ' \u00b7 ' + fmt(d.me.timeMs / 1000)); }
   } catch (e) { status.textContent = e.message; }
 }
 function closeLeaderboard() { $('#lbModal').hidden = true; const b = !$('#results').hidden ? $('#againBtn') : $('#startBtn'); if (b) b.focus(); }
@@ -2568,11 +2604,12 @@ $('#lbModal').addEventListener('click', e => { if (e.target === $('#lbModal')) c
 const HANDLE_KEY = 'cactusdash.handle';
 let playerHandle = store.get(HANDLE_KEY) || '', profileMode = 'start';
 try { localStorage.removeItem('cactusdash.wallet'); } catch (e) {}
-const HANDLE_RE = /^[A-Za-z0-9_]{1,15}$/;
+const HANDLE_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.'\u2019-]{0,15}$/u;
+const cleanName = v => v.replace(/^@+/, '').replace(/\s+/g, ' ').trim();
 const hasProfile = () => HANDLE_RE.test(playerHandle);
 function updateProfileLine() {
   $('#profileLine').hidden = !hasProfile();
-  $('#profileHandle').textContent = '@' + playerHandle;
+  $('#profileHandle').textContent = playerHandle;
 }
 function openProfile(mode) {
   profileMode = mode;
@@ -2591,7 +2628,7 @@ function askHandle() {
 }
 $('#handleForm').addEventListener('submit', e => {
   e.preventDefault();
-  const h = $('#handleInput').value.trim().replace(/^@+/, '');
+  const h = cleanName($('#handleInput').value);
   const ok = HANDLE_RE.test(h);
   $('#handleErr').hidden = ok;
   if (!ok) { $('#handleInput').focus(); return; }
