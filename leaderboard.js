@@ -1,8 +1,10 @@
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const BOARD = 'cactusdash:board:sidewinder';
-const playerKey = key => `cactusdash:player:${key}`;
+// Change SEASON to start a fresh leaderboard; earlier seasons stay in storage but are no longer read.
+const SEASON = '2';
+const BOARD = `cactusdash:s${SEASON}:board:sidewinder`;
+const playerKey = key => `cactusdash:s${SEASON}:player:${key}`;
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.'\u2019-]{0,15}$/u;
 const cleanName = v => String(v || '').replace(/^@+/, '').replace(/\s+/g, ' ').trim();
 const nameKey = name => name.toLowerCase();
