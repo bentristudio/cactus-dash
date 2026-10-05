@@ -124,6 +124,7 @@
   .toast{position:absolute;left:50%;bottom:calc(clamp(12px,2.6vh,30px) + min(110px,15vh));transform:translateX(-50%);font-weight:700;letter-spacing:.22em;font-size:15px;text-transform:uppercase;padding:8px 16px;border-radius:999px;background:rgba(34,21,15,.5);border:1px solid var(--edge);opacity:0;white-space:nowrap}
   .toast.show{animation:toast 1.3s ease forwards}
   @keyframes toast{0%{opacity:0;transform:translate(-50%,10px)}15%{opacity:1;transform:translate(-50%,0)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-6px)}}
+  .focus-hint{position:absolute;left:50%;top:calc(clamp(10px,2vh,22px) + 74px);transform:translateX(-50%);padding:8px 16px;border-radius:999px;background:rgba(34,21,15,.72);border:1px solid rgba(255,244,226,.3);font-weight:700;font-size:13px;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
   .wrongway{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);padding:10px 22px;border-radius:12px;background:rgba(242,100,61,.9);font-family:var(--display);font-weight:900;letter-spacing:.02em;font-size:22px;animation:blink .7s steps(2) infinite}
   @keyframes blink{50%{opacity:.35}}
   #count{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:8}
@@ -301,6 +302,7 @@
     <div class="banner" id="banner"></div>
     <div class="toast" id="toast"></div>
     <div class="wrongway" id="wrong" hidden>WRONG WAY</div>
+    <div class="focus-hint" id="focusHint" hidden>Click the game to take control</div>
   </div>
 
   <div id="count"></div>
@@ -2409,10 +2411,26 @@ function setPaused(v) {
 }
 
 // ================= main loop =================
-let last = performance.now(), frameAcc = 0, frameN = 0;
+let last = performance.now();
+const QUALITY = [1.75, 1.25, 1, 0.8, 0.8], focusHint = $('#focusHint');
+let qLevel = 0, qTime = 0, qFrames = 0, qWarm = 2.5, qSlow = 0;
+function adaptQuality(realDt) {
+  if (realDt > 0.5 || document.visibilityState !== 'visible') { qTime = 0; qFrames = 0; return; }
+  if (qWarm > 0) { qWarm -= realDt; return; }
+  qTime += realDt; qFrames++;
+  if (qTime < 1) return;
+  const fps = qFrames / qTime; qTime = 0; qFrames = 0;
+  qSlow = fps < 45 ? qSlow + 1 : 0;
+  if (qSlow < 2 || qLevel >= QUALITY.length - 1) return;
+  qSlow = 0; qLevel++;
+  pixelRatio = Math.min(QUALITY[qLevel], window.devicePixelRatio || 1);
+  renderer.setPixelRatio(pixelRatio); renderer.setSize(innerWidth, innerHeight);
+  if (qLevel === QUALITY.length - 1) sun.castShadow = false;
+}
 function frame(now) {
   requestAnimationFrame(frame);
-  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const realDt = (now - last) / 1000; last = now;
+  let dt = Math.min(0.1, realDt);
   if (state === 'loading') return;
   if (paused) dt = 0;
   clock += dt;
@@ -2433,7 +2451,9 @@ function frame(now) {
   }
   Sound.music(desiredMusic());
   renderer.render(scene, camera);
-  if (dt > 0) { frameAcc += dt; frameN++; if (frameN >= 90) { if (frameAcc / frameN > 0.024 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.375); renderer.setPixelRatio(pixelRatio); renderer.setSize(innerWidth, innerHeight); } frameAcc = 0; frameN = 0; } }
+  adaptQuality(realDt);
+  const needFocus = (state === 'race' || state === 'intro') && !paused && !document.hasFocus();
+  if (focusHint.hidden === needFocus) focusHint.hidden = !needFocus;
 }
 function desiredMusic() {
   if (paused) return null;
@@ -2504,7 +2524,7 @@ function clearKeys() { for (const k in keys) keys[k] = false; }
 addEventListener('keyup', e => { keys[e.code] = false; if (e.key === 'Meta' || e.key === 'Control' || e.key === 'Alt') clearKeys(); });
 addEventListener('focus', clearKeys);
 document.addEventListener('visibilitychange', clearKeys);
-addEventListener('blur', () => { clearKeys(); if (state === 'race') setPaused(true); });
+addEventListener('blur', clearKeys);
 document.querySelectorAll('#touch button').forEach(b => {
   const k = b.dataset.k;
   const on = e => { e.preventDefault(); touch[k] = true; b.classList.add('on'); };
