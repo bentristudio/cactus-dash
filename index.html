@@ -2310,7 +2310,7 @@ function drawSpeedFx(dt) {
 function showTitle() {
   state = 'title'; paused = false;
   $('#title').hidden = false; $('#handleModal').hidden = true; $('#lbModal').hidden = true;
-  if (LB.ok) lbProbe(); $('#hud').hidden = true; $('#results').hidden = true; $('#pause').hidden = true; $('#touch').hidden = true;
+  lbProbe(); $('#hud').hidden = true; $('#results').hidden = true; $('#pause').hidden = true; $('#touch').hidden = true;
   $('#count').innerHTML = '';
   makeRacers();
   finishOrder = []; raceTime = 0;
@@ -2531,7 +2531,7 @@ document.querySelectorAll('#touch button').forEach(b => {
   const off = e => { e.preventDefault(); touch[k] = false; b.classList.remove('on'); };
   b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
 });
-const LB = { ok: false, last: null };
+const LB = { ok: false, last: null, err: '' };
 async function lbRequest(method, body, query) {
   let r;
   try {
@@ -2546,8 +2546,8 @@ async function lbRequest(method, body, query) {
 }
 async function lbProbe() {
   if (!/^https?:$/.test(location.protocol)) return;
-  try { renderLbCard(await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?name=' + encodeURIComponent(playerHandle) : '')); LB.ok = true; }
-  catch (e) { LB.ok = false; renderLbCard(null); }
+  try { renderLbCard(await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?name=' + encodeURIComponent(playerHandle) : '')); LB.ok = true; LB.err = ''; }
+  catch (e) { LB.ok = false; LB.err = e.message; renderLbCard(null); }
   $('#lbOpenResults').hidden = !LB.ok;
 }
 function lbRow(e, tag) {
@@ -2578,17 +2578,28 @@ function renderLbCard(d) {
     list.appendChild(el);
   });
 }
-function submitResult(k) {
+async function submitResult(k) {
   LB.last = null;
-  if (!LB.ok || !HANDLE_RE.test(playerHandle)) return;
-  LB.last = { pending: true };
-  lbRequest('POST', { name: playerHandle, racer: k.def.id, timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)) })
-    .then(d => { LB.last = d; renderLbLine(); lbProbe(); })
-    .catch(e => { LB.last = { error: e.message }; renderLbLine(); });
+  if (!/^https?:$/.test(location.protocol) || !HANDLE_RE.test(playerHandle)) return;
+  const payload = { name: playerHandle, racer: k.def.id, timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)) };
+  LB.last = { pending: true }; renderLbLine();
+  if (!LB.ok) await lbProbe();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const d = await lbRequest('POST', payload);
+      LB.ok = true; LB.last = d; renderLbLine(); lbProbe();
+      return;
+    } catch (e) {
+      LB.last = { error: e.message };
+      if (/out of range|do not add up|Unknown racer|Names are|Too many/.test(e.message)) break;
+      await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+    }
+  }
+  renderLbLine();
 }
 function renderLbLine() {
   const el = $('#lbLine'), d = LB.last;
-  if (!d || !LB.ok) { el.hidden = true; return; }
+  if (!d) { el.hidden = true; return; }
   el.hidden = false;
   if (d.pending) el.textContent = 'Saving your time to the leaderboard\u2026';
   else if (d.error) el.textContent = 'Couldn\u2019t save to the leaderboard: ' + d.error;
@@ -2725,7 +2736,6 @@ async function boot() {
   renderer.compile(scene, camera);
   await step(100, 'READY');
   const ld = $('#loader'); ld.style.opacity = '0'; setTimeout(() => ld.remove(), 650);
-  lbProbe();
   if (!hasProfile()) setTimeout(() => { if (state === 'title' && $('#handleModal').hidden) openProfile('welcome'); }, 700);
 }
 requestAnimationFrame(frame);
