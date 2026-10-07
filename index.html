@@ -60,7 +60,7 @@
   .select-label{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .select-label .who{font-family:var(--display);font-weight:800;font-size:min(22px,3vh);letter-spacing:-.01em}
   .select-label .tag{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#f0cfae;font-weight:600}
-  .roster{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:min(100%,72vh)}
+  .roster{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-width:min(100%,86vh)}
   .racer-card{position:relative;padding:0;border:2px solid rgba(255,244,226,.18);border-radius:14px;overflow:hidden;cursor:pointer;aspect-ratio:1/1;background:var(--c1);transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
   .racer-card img{width:100%;height:100%;object-fit:cover;display:block}
   .racer-card .num{position:absolute;left:6px;top:4px;font-family:var(--display);font-weight:900;font-size:10px;color:rgba(255,244,226,.85);text-shadow:0 1px 2px rgba(0,0,0,.4)}
@@ -237,6 +237,7 @@
     #title .col{gap:10px}
     .home-right{display:none}
     .tod-btn{display:grid}
+    .roster{grid-template-columns:repeat(4,1fr);gap:8px}
     .keys{display:none}
   }
   @media (prefers-reduced-motion:reduce){
@@ -1537,6 +1538,8 @@ const ROSTER = [
   { id: 'pepper', name: 'Pepper', tag: 'Tuxedo Terror', fur: 0x2b2a30, light: 0xf4f1ea, mark: 0x1b1a1f, pattern: 'tux', kart: 0xf2b632, trim: 0x2b2a30, scarf: 0xf2643d, eye: 0x1c120c, stats: [4, 2, 3] },
   { id: 'panther', name: 'Panther', tag: 'The Pink Prowler', fur: 0xf29bbe, light: 0xfde4ee, mark: 0xc75a8a, pattern: 'points', kart: 0x3d6fd9, trim: 0xfde4ee, scarf: 0xffc94d, eye: 0x2e6fd0, stats: [4, 3, 2] },
   { id: 'mochi', name: 'Mochi', tag: 'Calico Comet', fur: 0xf6f1e8, light: 0xffffff, mark: 0xe08a3c, mark2: 0x2e2a28, pattern: 'calico', kart: 0x3fb89a, trim: 0xfff4e2, scarf: 0xe86fa0, eye: 0x1c120c, stats: [2, 4, 4] },
+  { id: 'blueberry', name: 'Blueberry', tag: 'The Cool Blue Cruiser', fur: 0x5a8fd8, light: 0xe6eefb, mark: 0x3f6fb8, pattern: 'solid', kart: 0xeef1f6, trim: 0x3b7fe0, scarf: 0xffc94d, eye: 0x2f9a58, stats: [3, 2, 4] },
+  { id: 'turbo', name: 'Turbo', tag: 'The Spotted Speedster', fur: 0xd9962f, light: 0xfbebcb, mark: 0x1d1611, pattern: 'cheetah', kart: 0x2c2f35, trim: 0xffc94d, scarf: 0xe8553d, eye: 0x1c120c, stats: [5, 3, 1] },
   { id: 'clementine', name: 'Clementine', tag: 'The Tangerine Tiger', fur: 0xe9691a, light: 0xfff4e6, mark: 0x1d1512, pattern: 'tiger', kart: 0x8e5bd9, trim: 0xffc94d, scarf: 0x3cc8c1, eye: 0x2a1a0c, stats: [4, 4, 1] },
   { id: 'beast', name: 'Beast', tag: 'King of the Canyon', fur: 0xdba24c, light: 0xf7e4c2, mark: 0x8a4a1e, mark2: 0xa75c26, pattern: 'lion', kart: 0xb23a48, trim: 0xffc94d, scarf: 0xfff4e2, eye: 0x2a1a0c, stats: [5, 2, 2] }
 ];
@@ -1545,10 +1548,15 @@ function numberTexture(n, bg) {
   const c = canvas(128, 128), g = c.getContext('2d');
   g.fillStyle = '#fff4e2'; g.beginPath(); g.arc(64, 64, 62, 0, TAU); g.fill();
   g.fillStyle = cssHex(bg); g.beginPath(); g.arc(64, 64, 50, 0, TAU); g.fill();
-  g.fillStyle = '#fff4e2'; g.font = '900 64px Unbounded, Arial Black, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), 64, 70);
+  const lum = ((bg >> 16) & 255) * 0.299 + ((bg >> 8) & 255) * 0.587 + (bg & 255) * 0.114;
+  g.fillStyle = lum > 170 ? '#22150f' : '#fff4e2'; g.font = '900 64px Unbounded, Arial Black, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), 64, 70);
   return tex(c);
 }
 
+const gogglesRimGeo = new THREE.TorusGeometry(0.155, 0.035, 8, 22);
+const gogglesLensGeo = (() => { const g = new THREE.CylinderGeometry(0.148, 0.148, 0.06, 20); g.rotateX(Math.PI / 2); return g; })();
+const glassesGlintGeo = new THREE.PlaneGeometry(0.1, 0.022);
+const glassesGlintMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false });
 function buildRacer(def, num) {
   const root = new THREE.Group(); root.rotation.order = 'YXZ';
   const body = new THREE.Group(); root.add(body);
@@ -1598,7 +1606,7 @@ function buildRacer(def, num) {
   // cat
   const F = mat(def.fur, { roughness: 0.95 }), Lm = mat(def.light, { roughness: 0.95 }), Mk = mat(def.mark, { roughness: 0.95 });
   const Mk2 = def.mark2 ? mat(def.mark2, { roughness: 0.95 }) : Mk, pink = mat(0xef98a6, { roughness: 0.8 });
-  const earMat = def.pattern === 'points' ? Mk : F, bigCat = def.pattern === 'tiger' || def.pattern === 'lion';
+  const earMat = def.pattern === 'points' ? Mk : F, bigCat = def.pattern === 'tiger' || def.pattern === 'lion' || def.pattern === 'cheetah';
   const torso = add(body, new THREE.SphereGeometry(0.55, 12, 9), F, 0, 1.48, -0.38); torso.scale.set(1, 1.12, 0.9);
   if (def.pattern === 'tiger') for (const zo of [-0.12, -0.3, -0.44]) add(torso, new THREE.TorusGeometry(Math.sqrt(0.565 * 0.565 - zo * zo), 0.05, 4, 16, Math.PI * 0.75), Mk, 0, 0, zo, 0, 0, Math.PI * 0.125);
   add(body, new THREE.SphereGeometry(0.38, 10, 8), Lm, 0, 1.52, -0.06).scale.set(1, 1.15, 0.55);
@@ -1645,12 +1653,40 @@ function buildRacer(def, num) {
     for (let k = 0; k < 7; k++) { const a = (k / 6 - 0.5) * 2.4; add(head, new THREE.SphereGeometry(0.24, 8, 6), k % 2 ? mA : mB, Math.sin(a) * 0.5, -0.62 + Math.abs(Math.sin(a)) * 0.1, 0.12 - Math.abs(a) * 0.1); }
   }
   if (def.pattern === 'calico') { add(head, new THREE.SphereGeometry(0.36, 10, 8), Mk, -0.34, 0.3, -0.22).scale.set(1, 0.7, 1); add(head, new THREE.SphereGeometry(0.3, 10, 8), Mk2, 0.36, 0.12, -0.34).scale.set(1, 0.8, 1); }
-  // goggles
-  const lens = mat(0x3cc8c1, { roughness: 0.12, metalness: 0.3, emissive: 0x0f3a38 });
-  for (const sx of [-1, 1]) {
-    add(head, new THREE.CylinderGeometry(0.17, 0.17, 0.1, 12), lens, sx * 0.24, 0.4, 0.5, Math.PI / 2 - 0.6);
-    add(head, new THREE.TorusGeometry(0.18, 0.04, 5, 14), metal, sx * 0.24, 0.4, 0.5, -0.6);
+  if (def.pattern === 'cheetah') {
+    const R = rng(91), spot = new THREE.SphereGeometry(0.055, 6, 4);
+    for (let k = 0, n = 0; k < 120 && n < 24; k++) {
+      const a = R() * TAU, b = 0.1 + R() * 1.75, x = Math.sin(b) * Math.cos(a), y = Math.cos(b), z = Math.sin(b) * Math.sin(a);
+      if (z > 0.3 && y < 0.62) continue;
+      add(skull, spot, Mk, x * 0.62, y * 0.62, z * 0.62).scale.setScalar(0.8 + R() * 0.6); n++;
+    }
+    for (let k = 0, n = 0; k < 120 && n < 22; k++) {
+      const a = R() * TAU, b = 0.25 + R() * 2.2, x = Math.sin(b) * Math.cos(a), y = Math.cos(b), z = Math.sin(b) * Math.sin(a);
+      if (z > 0.3) continue;
+      add(torso, spot, Mk, x * 0.53, y * 0.53, z * 0.53).scale.setScalar(0.9 + R() * 0.7); n++;
+    }
+    const faceZ = (x, y) => Math.max(0.64 * Math.sqrt(Math.max(0, 1 - (x / 0.717) ** 2 - (y / 0.608) ** 2)), 0.52 + 0.255 * Math.sqrt(Math.max(0, 1 - (x / 0.405) ** 2 - ((y + 0.18) / 0.255) ** 2)));
+    const tear = new THREE.SphereGeometry(0.03, 8, 6);
+    for (const sx of [-1, 1]) for (let k = 0; k < 5; k++) {
+      const y = -0.03 - k * 0.045, x = sx * (0.125 + k * 0.012);
+      add(head, tear, Mk, x, y, faceZ(x, y) + 0.004).scale.set(1, 1.5, 0.5);
+    }
   }
+  // racing goggles resting on the forehead, each lens tilted to follow the curve of the head
+  const lens = mat(0x3cc8c1, { roughness: 0.12, metalness: 0.3, emissive: 0x0f3a38 });
+  const lensAt = [];
+  for (const sx of [-1, 1]) {
+    const px = sx * 0.235, py = 0.355, pz = 0.64 * Math.sqrt(1 - (px / 0.717) ** 2 - (py / 0.608) ** 2);
+    const nrm = new THREE.Vector3(px / 0.514, py / 0.37, pz / 0.41).normalize();
+    const gg = new THREE.Group(); gg.position.set(px + nrm.x * 0.035, py + nrm.y * 0.035, pz + nrm.z * 0.035);
+    gg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nrm); head.add(gg);
+    add(gg, gogglesRimGeo, metal, 0, 0, 0);
+    add(gg, gogglesLensGeo, lens, 0, 0, 0.004);
+    const gl = new THREE.Mesh(glassesGlintGeo, glassesGlintMat); gl.position.set(-0.05, 0.05, 0.04); gl.rotation.z = -0.7; gg.add(gl);
+    lensAt.push(gg.position);
+  }
+  const bridge = add(head, new THREE.BoxGeometry(0.17, 0.045, 0.045), metal, 0, (lensAt[0].y + lensAt[1].y) / 2 + 0.01, (lensAt[0].z + lensAt[1].z) / 2 + 0.02);
+  bridge.rotation.x = -0.65;
   // scarf
   const S = mat(def.scarf, { roughness: 0.85, side: THREE.DoubleSide });
   add(body, new THREE.TorusGeometry(0.4, 0.13, 6, 14), S, 0, 1.95, -0.25, Math.PI / 2);
@@ -1658,7 +1694,7 @@ function buildRacer(def, num) {
   add(scarfTail, new THREE.BoxGeometry(0.24, 0.05, 0.95), S, 0, 0, -0.45);
   add(scarfTail, new THREE.BoxGeometry(0.24, 0.05, 0.75), S, -0.22, -0.08, -0.36, 0, 0.18, 0);
   // arms & paws
-  const pawM = def.pattern === 'points' ? Mk : (def.pattern === 'tux' || def.pattern === 'calico' || def.pattern === 'tiger') ? Lm : F;
+  const pawM = def.pattern === 'points' ? Mk : (def.pattern === 'tux' || def.pattern === 'calico' || def.pattern === 'tiger' || def.pattern === 'solid') ? Lm : F;
   for (const sx of [-1, 1]) {
     add(body, new THREE.CylinderGeometry(0.12, 0.14, 0.75, 6), F, sx * 0.4, 1.58, 0.05, 1.05, 0, sx * 0.32);
     add(body, new THREE.SphereGeometry(0.15, 8, 6), pawM, sx * 0.27, 1.5, 0.36);
@@ -1675,6 +1711,8 @@ function buildRacer(def, num) {
     if (def.pattern === 'tux' && k === 6) m = Lm;
     if (def.pattern === 'tiger') m = k % 2 ? Mk : F;
     if (def.pattern === 'lion' && k === 6) m = mat(def.mark, { roughness: 0.95 });
+    if (def.pattern === 'solid' && k === 6) m = Lm;
+    if (def.pattern === 'cheetah') m = k === 6 ? Lm : k >= 3 && k % 2 ? Mk : F;
     add(g, new THREE.SphereGeometry(def.pattern === 'lion' && k === 6 ? 0.24 : 0.16 - k * 0.008, 8, 6), m, 0, 0, 0);
     tail.push(g); parent = g;
   }
@@ -2274,7 +2312,11 @@ addEventListener('pointerdown', unlockAudio);
 const LAPS = 3;
 const BASE_MAX = 36, ACCEL = 27, BRAKE = 46, COAST = 7, REV_MAX = 11, TURN = 2.05;
 let racers = [], snakes = [], gilas = [], pads = [], dust, sparks, raceId = 0;
-let state = 'loading', paused = false, raceTime = 0, introT = 0, clock = 0, playerIdx = 0, selected = +(store.get('cactusdash.racer') || 0) % ROSTER.length;
+function savedRacer() {
+  const v = store.get('cactusdash.racer') || '', id = /^\d+$/.test(v) ? ['biscuit', 'pepper', 'panther', 'mochi', 'clementine', 'beast'][+v] : v;
+  return Math.max(0, ROSTER.findIndex(r => r.id === id));
+}
+let state = 'loading', paused = false, raceTime = 0, introT = 0, clock = 0, playerIdx = 0, selected = savedRacer();
 let finishOrder = [], resultsShown = false, camShake = 0;
 const keys = {};
 const touch = { left: false, right: false, drift: false, brake: false };
@@ -2282,7 +2324,9 @@ const touch = { left: false, right: false, drift: false, brake: false };
 function makeRacers() {
   racers.forEach(r => scene.remove(r.model.root));
   racers = [];
-  const order = ROSTER.map((_, i) => i).filter(i => i !== selected);
+  const others = ROSTER.map((_, i) => i).filter(i => i !== selected);
+  for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [others[i], others[j]] = [others[j], others[i]]; }
+  const order = others.slice(0, 5);
   order.push(selected);
   const skills = [1.14, 1.13, 1.12, 1.11, 1.1];
   order.forEach((ri, slot) => {
@@ -2335,7 +2379,7 @@ function makePads() {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 7), pm);
     m.geometry.rotateX(-Math.PI / 2);
     m.position.set(s.x + s.rx * lat, s.y + 0.08, s.z + s.rz * lat);
-    m.rotation.y = s.hd;
+    m.rotation.y = s.hd + Math.PI;
     scene.add(m);
     return { i, lat, m };
   });
@@ -2722,10 +2766,12 @@ function placeModel(k, dt) {
 // ================= camera =================
 const cam = { pos: new THREE.Vector3(), look: new THREE.Vector3(), yaw: 0, fov: 62 };
 const introFrom = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 44 };
+const mobileView = () => matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+let mobileCam = false;
 function chaseTarget(k, outPos, outLook) {
-  const d = 7.4 + (k.boostT > 0 ? 0.9 : 0), h = 3.05;
+  const d = 7.4 + (k.boostT > 0 ? 0.9 : 0), h = mobileCam ? 3.55 : 3.05, ahead = mobileCam ? 7 : 5;
   outPos.set(k.pos.x - Math.sin(cam.yaw) * d, k.pos.y + h, k.pos.z - Math.cos(cam.yaw) * d);
-  outLook.set(k.pos.x + Math.sin(cam.yaw) * 5, k.pos.y + 1.35, k.pos.z + Math.cos(cam.yaw) * 5);
+  outLook.set(k.pos.x + Math.sin(cam.yaw) * ahead, k.pos.y + 1.35, k.pos.z + Math.cos(cam.yaw) * ahead);
 }
 const _cp = new THREE.Vector3(), _cl = new THREE.Vector3(), _op = new THREE.Vector3(), _ol = new THREE.Vector3();
 function orbitTarget(k, a, dist, outPos, outLook, offsetLeft) {
@@ -2920,7 +2966,7 @@ function updateSelection() {
 }
 function select(i) {
   if (state !== 'title' || i === selected) return;
-  selected = (i + ROSTER.length) % ROSTER.length; store.set('cactusdash.racer', String(selected));
+  selected = (i + ROSTER.length) % ROSTER.length; store.set('cactusdash.racer', ROSTER[selected].id);
   Sound.click();
   const keep = cam.pos.clone(), look = cam.look.clone();
   showTitle(); cam.pos.copy(keep); cam.look.copy(look);
@@ -2930,6 +2976,8 @@ function startRace() {
   if (state !== 'title' && state !== 'done') return;
   Sound.raceBpm = 112; raceId++;
   makeRacers(); resetJaguars();
+  mobileCam = mobileView();
+  if (mobileCam) racers.forEach(k => { k.model.head.scale.setScalar(0.62); k.model.head.position.y = 2.08; });
   chunks.forEach(c => { c.active = false; c.m.visible = false; });
   chunks.forEach(placeChunk);
   introFrom.pos.copy(cam.pos); introFrom.look.copy(cam.look); introFrom.fov = cam.fov;
