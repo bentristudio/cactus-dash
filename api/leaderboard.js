@@ -18,7 +18,7 @@ function storageConfig() {
 const STORAGE = storageConfig();
 
 // Change SEASON to start a fresh leaderboard; earlier seasons stay in storage but are no longer read.
-const SEASON = '2';
+const SEASON = '3';
 const BOARD = `cactusdash:s${SEASON}:board:sidewinder`;
 const playerKey = key => `cactusdash:s${SEASON}:player:${key}`;
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.'\u2019-]{0,15}$/u;
@@ -220,13 +220,13 @@ async function topEntries(limit) {
   const rows = [];
   for (let i = 0; i < flat.length; i += 2) rows.push({ key: flat[i], timeMs: Number(flat[i + 1]) });
   if (!rows.length) return [];
-  const details = await redis(rows.map(r => ['HMGET', playerKey(r.key), 'handle', 'racer']));
-  return rows.map((r, i) => ({ rank: i + 1, name: details[i][0] || r.key, racer: details[i][1] || null, timeMs: r.timeMs }));
+  const details = await redis(rows.map(r => ['HMGET', playerKey(r.key), 'handle', 'racer', 'device']));
+  return rows.map((r, i) => ({ rank: i + 1, name: details[i][0] || r.key, racer: details[i][1] || null, device: details[i][2] || null, timeMs: r.timeMs }));
 }
 
 async function standing(key) {
-  const [rank, score, racer, total] = await redis([['ZRANK', BOARD, key], ['ZSCORE', BOARD, key], ['HGET', playerKey(key), 'racer'], ['ZCARD', BOARD]]);
-  return rank === null ? null : { rank: rank + 1, timeMs: Number(score), racer: racer || null, total };
+  const [rank, score, [racer, device], total] = await redis([['ZRANK', BOARD, key], ['ZSCORE', BOARD, key], ['HMGET', playerKey(key), 'racer', 'device'], ['ZCARD', BOARD]]);
+  return rank === null ? null : { rank: rank + 1, timeMs: Number(score), racer: racer || null, device: device || null, total };
 }
 
 function readBody(req) {
@@ -275,6 +275,7 @@ export default async function handler(req, res) {
 
       const name = cleanName(body.name || body.handle);
       const racer = String(body.racer || '').toLowerCase();
+      const device = body.device === 'mobile' || body.device === 'desktop' ? body.device : '';
       const timeMs = Math.round(Number(body.timeMs));
       const laps = Array.isArray(body.laps) ? body.laps.map(n => Math.round(Number(n))) : [];
       const ticket = String(body.ticket || '');
@@ -326,7 +327,7 @@ export default async function handler(req, res) {
       if (improved) {
         commands.push(
           ['ZADD', BOARD, String(timeMs), key],
-          ['HSET', playerKey(key), 'handle', name, 'racer', racer, 'timeMs', String(timeMs), 'at', new Date().toISOString()]
+          ['HSET', playerKey(key), 'handle', name, 'racer', racer, 'device', device, 'timeMs', String(timeMs), 'at', new Date().toISOString()]
         );
       }
       await redis(commands);
