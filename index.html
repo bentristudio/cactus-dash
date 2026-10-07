@@ -193,6 +193,9 @@
   .lb-you .r{font-family:var(--display);font-weight:800;font-size:14px;min-width:22px}
   .lb-you img{width:24px;height:24px;border-radius:50%;background:var(--c1)}
   .lb-you .h{font-weight:700;font-size:13px;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lb-name{display:flex;align-items:baseline;min-width:0}
+  .lb-name .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .lb-name .dev{flex:none;margin-left:.4em;font-weight:500;font-size:.85em;letter-spacing:.02em;text-transform:none;opacity:.6}
   .lb-you .t{font-weight:700;font-size:13px;letter-spacing:.04em}
   #lbModal .panel{padding:20px 26px 20px;max-height:96vh}
   #lbModal h2{font-size:min(44px,6.2vh)}
@@ -2567,6 +2570,13 @@ function lbRow(e, tag) {
   if (playerHandle && e.name.toLowerCase() === playerHandle.toLowerCase()) el.className = 'me';
   return { el, ri, def };
 }
+// Name plus "(desktop)" / "(mobile)" for the device the best time was set on.
+function setLbName(el, name, device) {
+  el.classList.add('lb-name'); el.textContent = '';
+  const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = name; el.append(nm);
+  if (device === 'desktop' || device === 'mobile') { const dv = document.createElement('span'); dv.className = 'dev'; dv.textContent = '(' + device + ')'; el.append(dv); }
+}
+const playDevice = () => matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
 function renderYou(el, d) {
   if (!HANDLE_RE.test(playerHandle) || !d) { el.hidden = true; return; }
   const me = d.me, ri = me && me.racer ? Math.max(0, ROSTER.findIndex(r => r.id === me.racer)) : selected, def = ROSTER[ri];
@@ -2574,7 +2584,7 @@ function renderYou(el, d) {
   el.innerHTML = '<div class="lbl"></div><div class="you-row"><span class="r"></span><img alt="" style="--c1:' + cssHex(def.kart) + '" src="' + portraits[ri] + '"><span class="h"></span><span class="t"></span></div>';
   el.querySelector('.lbl').textContent = 'Your place' + (me && me.total ? ' \u00b7 of ' + me.total + (me.total === 1 ? ' racer' : ' racers') : '');
   el.querySelector('.r').textContent = me ? '#' + me.rank : '\u2013';
-  el.querySelector('.h').textContent = playerHandle;
+  setLbName(el.querySelector('.h'), playerHandle, me && me.device);
   el.querySelector('.t').textContent = me ? fmt(me.timeMs / 1000) : 'Finish a race to rank';
 }
 function renderLbCard(d) {
@@ -2586,7 +2596,7 @@ function renderLbCard(d) {
   d.entries.slice(0, 5).forEach(e => {
     const { el, ri, def } = lbRow(e, 'li');
     el.innerHTML = '<span class="r"></span><img alt="" style="--c1:' + cssHex(def.kart) + '" src="' + portraits[ri] + '"><span class="h"></span><span class="t"></span>';
-    el.querySelector('.r').textContent = e.rank; el.querySelector('.h').textContent = e.name; el.querySelector('.t').textContent = fmt(e.timeMs / 1000);
+    el.querySelector('.r').textContent = e.rank; setLbName(el.querySelector('.h'), e.name, e.device); el.querySelector('.t').textContent = fmt(e.timeMs / 1000);
     list.appendChild(el);
   });
 }
@@ -2608,7 +2618,7 @@ async function submitResult(k) {
   LB.last = null;
   if (!/^https?:$/.test(location.protocol) || !HANDLE_RE.test(playerHandle)) return;
   const ticket = LB.ticket && LB.ticket.race === raceId ? LB.ticket.id : '';
-  const payload = { name: playerHandle, racer: k.def.id, timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)), ticket, trace: k.trace || [] };
+  const payload = { name: playerHandle, racer: k.def.id, device: playDevice(), timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)), ticket, trace: k.trace || [] };
   LB.last = { pending: true }; renderLbLine();
   if (!LB.ok) await lbProbe();
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -2648,7 +2658,7 @@ async function openLeaderboard() {
       const ri = Math.max(0, ROSTER.findIndex(r => r.id === e.racer)), def = ROSTER[ri];
       tr.innerHTML = '<td></td><td><span class="who"><img alt="" style="--c1:' + cssHex(def.kart) + '" src="' + portraits[ri] + '"><span></span></span></td><td></td>';
       tr.children[0].textContent = e.rank;
-      tr.querySelector('.who span').textContent = e.name;
+      setLbName(tr.querySelector('.who span'), e.name, e.device);
       tr.children[2].textContent = fmt(e.timeMs / 1000);
       body.appendChild(tr);
     });
