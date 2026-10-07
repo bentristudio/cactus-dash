@@ -2353,7 +2353,6 @@ function startRace() {
   Sound.init(); if (Sound.ctx && Sound.ctx.state === 'suspended') Sound.ctx.resume();
   if (state !== 'title' && state !== 'done') return;
   Sound.raceBpm = 112; raceId++;
-  lbStartTicket(raceId);
   makeRacers();
   chunks.forEach(c => { c.active = false; c.m.visible = false; });
   chunks.forEach(placeChunk);
@@ -2364,6 +2363,7 @@ function startRace() {
   $('#touch').hidden = !matchMedia('(pointer: coarse)').matches;
   finishOrder = []; resultsShown = false; raceTime = 0; introT = 0; hudCache = {};
   state = 'intro';
+  lbStartTicket(raceId);
   buildStandings();
   setupMinimap();
   countdownStep = -1; throttleFirst = -1;
@@ -2600,25 +2600,28 @@ function renderLbCard(d) {
     list.appendChild(el);
   });
 }
+// A race ticket lets the server confirm the race really took as long as the time says. If the connection
+// hiccups at the start, keep trying through the opening seconds; the server allows for that lateness.
+const TICKET_RETRY_UNTIL = 25;
 async function lbStartTicket(race) {
   LB.ticket = null;
   if (!/^https?:$/.test(location.protocol)) return;
-  for (let attempt = 0; attempt < 3 && race === raceId; attempt++) {
+  while (race === raceId && state !== 'title' && !((state === 'race' || state === 'done') && raceTime > TICKET_RETRY_UNTIL)) {
     try {
       const d = await lbRequest('POST', { action: 'start' });
-      if (race === raceId) LB.ticket = { id: d.ticket, race };
+      if (race === raceId) LB.ticket = { id: d.ticket, race, at: state === 'race' ? raceTime : 0 };
       return;
     } catch (e) {
-      if (e.status && e.status < 500) return;
-      await new Promise(r => setTimeout(r, 1500));
+      if (e.status && e.status < 500 && e.status !== 429) return;
+      await new Promise(r => setTimeout(r, 2000));
     }
   }
 }
 async function submitResult(k) {
   LB.last = null;
   if (!/^https?:$/.test(location.protocol) || !HANDLE_RE.test(playerHandle)) return;
-  const ticket = LB.ticket && LB.ticket.race === raceId ? LB.ticket.id : '';
-  const payload = { name: playerHandle, racer: k.def.id, device: playDevice(), timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)), ticket, trace: k.trace || [] };
+  const tk = LB.ticket && LB.ticket.race === raceId ? LB.ticket : null;
+  const payload = { name: playerHandle, racer: k.def.id, device: playDevice(), timeMs: Math.round(k.finishTime * 1000), laps: k.lapTimes.slice(0, LAPS).map(t => Math.round(t * 1000)), ticket: tk ? tk.id : '', ticketAt: tk ? Math.round(tk.at * 1000) : 0, trace: k.trace || [] };
   LB.last = { pending: true }; renderLbLine();
   if (!LB.ok) await lbProbe();
   for (let attempt = 0; attempt < 3; attempt++) {
