@@ -39,6 +39,7 @@ const TICKET_TTL_SECONDS = 3600;
 const TICKETS_PER_WINDOW = 40;
 const NAMES_PER_IP_PER_DAY = 10;
 const CLOCK_GRACE_MS = 2000;
+const MAX_TICKET_LATE_MS = 30000;
 const TRACE_STEP_MS = 500;
 const MAX_SPEED_MPS = 55;
 const MAX_PACE_MPS = 48;
@@ -209,6 +210,13 @@ function redisTcp(redisUrl, commands) {
   });
 }
 
+// Counts a request in a 10-minute window. Any counter left without an expiry gets one, so limits can't stick.
+async function countHit(key) {
+  const [count, ttl] = await redis([['INCR', key], ['TTL', key]]);
+  if (ttl < 0) await redis([['EXPIRE', key, String(WINDOW_SECONDS)]]);
+  return count;
+}
+
 async function sweepBanned() {
   if (bannedSwept || !BANNED.size) return;
   await redis([['ZREM', BOARD, ...BANNED]]);
@@ -264,9 +272,7 @@ export default async function handler(req, res) {
       const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
 
       if (body.action === 'start') {
-        const limitKey = `cactusdash:tickets:${ip}`;
-        const [count] = await redis([['INCR', limitKey]]);
-        if (count === 1) await redis([['EXPIRE', limitKey, String(WINDOW_SECONDS)]]);
+        const count = await countHit(`cactusdash:tickets:${ip}`);
         if (count > TICKETS_PER_WINDOW) return res.status(429).json({ error: 'Too many races started. Try again in a few minutes.' });
         const ticket = randomBytes(16).toString('hex');
         await redis([['SET', ticketKey(ticket), String(Date.now()), 'EX', String(TICKET_TTL_SECONDS)]]);
@@ -279,7 +285,8 @@ export default async function handler(req, res) {
       const timeMs = Math.round(Number(body.timeMs));
       const laps = Array.isArray(body.laps) ? body.laps.map(n => Math.round(Number(n))) : [];
       const ticket = String(body.ticket || '');
-      const trace = Array.isArray(body.trace) ? body.trace : [];
+      const trace = Array.isArray(body.trace) ? body.trace : null;
+      const ticketAt = Math.min(MAX_TICKET_LATE_MS, Math.max(0, Math.round(Number(body.ticketAt) || 0)));
       if (!NAME_RE.test(name)) return res.status(400).json({ error: 'Names are 1-16 letters, numbers, spaces or - _ . \'' });
       if (!RACERS.has(racer)) return res.status(400).json({ error: 'Unknown racer.' });
       if (BANNED.has(nameKey(name))) return res.status(403).json({ error: 'This name can\u2019t be used on the leaderboard.' });
@@ -288,15 +295,14 @@ export default async function handler(req, res) {
       if (laps.length !== LAPS || laps.some(l => !(l >= MIN_LAP_MS)) || Math.abs(lapSum - timeMs) > 1500) {
         return res.status(400).json({ error: `${NOT_VERIFIED} (laps)` });
       }
+      if (!trace) return res.status(400).json({ error: 'A new version of Cactus Dash is out. Refresh the page, then race again to get on the leaderboard.' });
       if (!/^[0-9a-f]{32}$/.test(ticket)) {
-        return res.status(400).json({ error: 'This race wasn\u2019t timed by the leaderboard (the connection dropped when it started), so it can\u2019t be saved.' });
+        return res.status(400).json({ error: 'The game couldn\u2019t reach the leaderboard at the start of this race, so the time couldn\u2019t be checked. Check your connection and race again.' });
       }
       const routeProblem = checkRoute(trace, timeMs, laps);
       if (routeProblem) return res.status(400).json({ error: `${NOT_VERIFIED} (${routeProblem})` });
 
-      const limitKey = `cactusdash:ratelimit:${ip}`;
-      const [count] = await redis([['INCR', limitKey]]);
-      if (count === 1) await redis([['EXPIRE', limitKey, String(WINDOW_SECONDS)]]);
+      const count = await countHit(`cactusdash:ratelimit:${ip}`);
       if (count > SUBMITS_PER_WINDOW) return res.status(429).json({ error: 'Too many submissions. Try again in a few minutes.' });
 
       const key = nameKey(name);
@@ -318,7 +324,7 @@ export default async function handler(req, res) {
         if (owner === claim) return res.status(200).json({ ok: true, improved: false, me: await standing(key) });
         return res.status(400).json({ error: 'This race was already submitted.' });
       }
-      if (Date.now() - Number(startedAt) < timeMs - CLOCK_GRACE_MS) return res.status(400).json({ error: `${NOT_VERIFIED} (clock)` });
+      if (Date.now() - Number(startedAt) < timeMs - ticketAt - CLOCK_GRACE_MS) return res.status(400).json({ error: `${NOT_VERIFIED} (clock)` });
 
       if (!knownName) await redis([['SADD', namesKey, key], ['EXPIRE', namesKey, '86400']]);
       const [previous] = await redis([['ZSCORE', BOARD, key]]);
