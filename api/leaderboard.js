@@ -24,7 +24,7 @@ const playerKey = key => `cactusdash:s${SEASON}:player:${key}`;
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.'\u2019-]{0,15}$/u;
 const cleanName = v => String(v || '').replace(/^@+/, '').replace(/\s+/g, ' ').trim();
 const nameKey = name => name.toLowerCase();
-const RACERS = new Set(['biscuit', 'pepper', 'panther', 'mochi', 'clementine', 'beast']);
+const RACERS = new Set(['biscuit', 'pepper', 'panther', 'mochi', 'blueberry', 'turbo', 'clementine', 'beast']);
 const LAPS = 3;
 const MIN_RACE_MS = 90000;
 const MAX_RACE_MS = 900000;
