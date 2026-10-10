@@ -47,6 +47,36 @@ const PACE_WINDOW_STEPS = 20;
 const MAX_LATERAL_M = 40;
 const FINISH_SLACK_M = 15;
 const SPLIT_SLACK_MS = 1500;
+// ---------- name filter: slurs, hate terms and strong profanity ----------
+// Names are lower-cased, accents and look-alike letters are folded, digits read as letters (n1gg3r),
+// and spaces/dots/dashes removed, so spaced-out or stretched spellings are caught too.
+const HOMOGLYPHS = { 'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'у': 'y', 'х': 'x', 'і': 'i', 'ї': 'i', 'ј': 'j', 'к': 'k', 'м': 'm', 'т': 't', 'в': 'b', 'ɡ': 'g', 'ı': 'i', 'ß': 'ss', 'æ': 'ae', 'œ': 'oe', 'ø': 'o', 'đ': 'd', 'ł': 'l' };
+const LEET = { '0': 'o', '1': 'i', '2': 'z', '3': 'e', '4': 'a', '5': 's', '6': 'g', '7': 't', '8': 'b', '9': 'g' };
+const stretch = w => w.split('').map(c => c + '+').join('');
+// blocked anywhere inside a name
+const BLOCK_ANYWHERE = [
+  'nigger', 'nigga', 'faggot', 'fagot', 'kike', 'chink', 'gook', 'wetback', 'beaner', 'jigaboo', 'jiggaboo', 'porchmonkey', 'junglebunny',
+  'towelhead', 'raghead', 'cameljockey', 'chingchong', 'zipperhead', 'redskin', 'polack', 'tranny', 'shemale', 'retard', 'spearchucker',
+  'golliwog', 'darkie', 'chinaman', 'kaffir', 'kafir', 'nazi', 'hitler', 'kkk', 'siegheil', 'heilhitler', 'whitepower', 'whitepride',
+  'fuck', 'cunt', 'shit', 'bitch', 'whore', 'slut', 'porn', 'wank', 'twat', 'asshole', 'dickhead', 'cocksucker', 'pedophile', 'paedophile', 'molest'
+].map(w => new RegExp(stretch(w)));
+const BLOCK_PATTERNS = [/n+i+g{2,}/, /n+i+q{2,}/, /n+i+b{2,}a+/, /f+a+g{2,}/];
+// blocked only as a whole word, because they hide inside innocent words ("coon" in "raccoon", "spic" in "spicy")
+const BLOCK_WORDS = [
+  'coon', 'spic', 'spick', 'jap', 'paki', 'wop', 'dago', 'kraut', 'squaw', 'dyke', 'fag', 'negro', 'negroe', 'niga', 'wog', 'abo', 'gyp',
+  'homo', 'spaz', 'mong', 'cock', 'cum', 'rape', 'rapist', 'kys', 'pedo'
+].map(w => new RegExp('^' + stretch(w) + 's?$'));
+export function nameAllowed(name) {
+  const raw = String(name || '').toLowerCase();
+  if (/14\s*88|88\s*14/.test(raw)) return false;
+  let folded = '';
+  for (const ch of raw.normalize('NFKD').replace(/[̀-ͯ]/g, '')) folded += HOMOGLYPHS[ch] || LEET[ch] || ch;
+  const tokens = folded.split(/[^a-z]+/).filter(Boolean), joined = tokens.join('');
+  if (BLOCK_PATTERNS.some(r => r.test(joined)) || BLOCK_ANYWHERE.some(r => r.test(joined))) return false;
+  return !tokens.concat(joined).some(w => BLOCK_WORDS.some(r => r.test(w)));
+}
+const NAME_NOT_ALLOWED = 'That name isn’t allowed on the leaderboard. Please pick a different name.';
+
 // Names listed in the BANNED_NAMES setting (comma separated) are removed from the board and can't post.
 const BANNED = new Set(String(process.env.BANNED_NAMES || '').split(',').map(v => nameKey(cleanName(v))).filter(Boolean));
 let bannedSwept = false;
@@ -217,16 +247,19 @@ async function countHit(key) {
   return count;
 }
 
-async function sweepBanned() {
-  if (bannedSwept || !BANNED.size) return;
-  await redis([['ZREM', BOARD, ...BANNED]]);
+async function sweepBoard() {
+  if (bannedSwept) return;
+  const [keys] = await redis([['ZRANGE', BOARD, '0', '-1']]);
+  const bad = keys.filter(k => BANNED.has(k) || !nameAllowed(k));
+  if (bad.length) await redis([['ZREM', BOARD, ...bad]]);
   bannedSwept = true;
 }
 
 async function topEntries(limit) {
-  const [flat] = await redis([['ZRANGE', BOARD, '0', String(limit - 1), 'WITHSCORES']]);
+  const [flat] = await redis([['ZRANGE', BOARD, '0', String(limit * 2 - 1), 'WITHSCORES']]);
   const rows = [];
-  for (let i = 0; i < flat.length; i += 2) rows.push({ key: flat[i], timeMs: Number(flat[i + 1]) });
+  for (let i = 0; i < flat.length; i += 2) if (nameAllowed(flat[i]) && !BANNED.has(flat[i])) rows.push({ key: flat[i], timeMs: Number(flat[i + 1]) });
+  rows.length = Math.min(rows.length, limit);
   if (!rows.length) return [];
   const details = await redis(rows.map(r => ['HMGET', playerKey(r.key), 'handle', 'racer', 'device']));
   return rows.map((r, i) => ({ rank: i + 1, name: details[i][0] || r.key, racer: details[i][1] || null, device: details[i][2] || null, timeMs: r.timeMs }));
@@ -254,17 +287,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, problem: `Storage found (${STORAGE.source}) but it rejected the request: ${err.message}`, storageVars });
     }
   }
+  if (req.method === 'GET' && req.query && req.query.checkName !== undefined) {
+    const n = cleanName(req.query.checkName);
+    return res.status(200).json({ allowed: NAME_RE.test(n) && nameAllowed(n) && !BANNED.has(nameKey(n)) });
+  }
   if (!STORAGE) return res.status(503).json({ error: 'Leaderboard storage is not connected yet.' });
   try {
-    await sweepBanned();
+    await sweepBoard();
     if (req.method === 'GET') {
       const name = cleanName(req.query && (req.query.name || req.query.handle));
+      const ok = !name || (nameAllowed(name) && !BANNED.has(nameKey(name)));
       const [entries, [total], me] = await Promise.all([
         topEntries(10),
         redis([['ZCARD', BOARD]]),
-        NAME_RE.test(name) ? standing(nameKey(name)) : null
+        ok && NAME_RE.test(name) ? standing(nameKey(name)) : null
       ]);
-      return res.status(200).json({ entries, total, me });
+      return res.status(200).json({ entries, total, me, nameAllowed: ok });
     }
 
     if (req.method === 'POST') {
@@ -289,7 +327,7 @@ export default async function handler(req, res) {
       const ticketAt = Math.min(MAX_TICKET_LATE_MS, Math.max(0, Math.round(Number(body.ticketAt) || 0)));
       if (!NAME_RE.test(name)) return res.status(400).json({ error: 'Names are 1-16 letters, numbers, spaces or - _ . \'' });
       if (!RACERS.has(racer)) return res.status(400).json({ error: 'Unknown racer.' });
-      if (BANNED.has(nameKey(name))) return res.status(403).json({ error: 'This name can\u2019t be used on the leaderboard.' });
+      if (BANNED.has(nameKey(name)) || !nameAllowed(name)) return res.status(400).json({ error: NAME_NOT_ALLOWED });
       if (!(timeMs >= MIN_RACE_MS && timeMs <= MAX_RACE_MS)) return res.status(400).json({ error: `${NOT_VERIFIED} (time)` });
       const lapSum = laps.reduce((a, b) => a + b, 0);
       if (laps.length !== LAPS || laps.some(l => !(l >= MIN_LAP_MS)) || Math.abs(lapSum - timeMs) > 1500) {
