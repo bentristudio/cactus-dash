@@ -3188,7 +3188,11 @@ async function lbRequest(method, body, query) {
 }
 async function lbProbe() {
   if (!/^https?:$/.test(location.protocol)) return;
-  try { renderLbCard(await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?name=' + encodeURIComponent(playerHandle) : '')); LB.ok = true; LB.err = ''; }
+  try {
+    const d = await lbRequest('GET', null, HANDLE_RE.test(playerHandle) ? '?name=' + encodeURIComponent(playerHandle) : '');
+    renderLbCard(d); LB.ok = true; LB.err = '';
+    if (d.nameAllowed === false && state === 'title' && $('#handleModal').hidden) openProfile('rename');
+  }
   catch (e) { LB.ok = false; LB.err = e.message; renderLbCard(null); }
   $('#lbOpenResults').hidden = !LB.ok;
 }
@@ -3319,7 +3323,8 @@ function openProfile(mode) {
   m.hidden = false; hi.value = playerHandle;
   $('#handleErr').hidden = true;
   $('#profileSub').textContent = LB.ok ? 'Shown on the public Cactus Dash leaderboard next to your best race time.' : 'Shown on the scoreboard.';
-  $('#profileEyebrow').textContent = mode === 'edit' ? 'Edit racer profile' : mode === 'welcome' ? 'Welcome, racer' : 'Before your first race';
+  $('#profileEyebrow').textContent = mode === 'rename' ? 'Choose a new name' : mode === 'edit' ? 'Edit racer profile' : mode === 'welcome' ? 'Welcome, racer' : 'Before your first race';
+  if (mode === 'rename') { $('#handleErr').textContent = NAME_BLOCKED_ERR; $('#handleErr').hidden = false; }
   $('#profileSubmit').textContent = mode === 'start' ? 'Start race' : mode === 'welcome' ? 'Continue' : 'Save';
   $('#handleBack').textContent = mode === 'welcome' ? 'Not now' : 'Back';
   setTimeout(() => { hi.focus(); hi.select(); }, 30);
@@ -3328,12 +3333,20 @@ function askHandle() {
   if (state !== 'title') return;
   if (hasProfile()) startRace(); else openProfile('start');
 }
-$('#handleForm').addEventListener('submit', e => {
+const NAME_FORMAT_ERR = 'Use 1\u201316 characters: letters, numbers, spaces, or - _ . \u2019';
+const NAME_BLOCKED_ERR = 'That name isn\u2019t allowed. Please choose a different name.';
+async function nameIsAllowed(h) {
+  if (!/^https?:$/.test(location.protocol)) return true;
+  try { const r = await fetch('/api/leaderboard?checkName=' + encodeURIComponent(h), { cache: 'no-store' }); if (!r.ok) return true; return (await r.json()).allowed !== false; }
+  catch (e) { return true; }
+}
+$('#handleForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const h = cleanName($('#handleInput').value);
-  const ok = HANDLE_RE.test(h);
-  $('#handleErr').hidden = ok;
-  if (!ok) { $('#handleInput').focus(); return; }
+  const h = cleanName($('#handleInput').value), err = $('#handleErr');
+  let msg = HANDLE_RE.test(h) ? '' : NAME_FORMAT_ERR;
+  if (!msg && !(await nameIsAllowed(h))) msg = NAME_BLOCKED_ERR;
+  err.textContent = msg; err.hidden = !msg;
+  if (msg) { $('#handleInput').focus(); return; }
   playerHandle = h; store.set(HANDLE_KEY, h);
   $('#handleModal').hidden = true;
   updateProfileLine();
